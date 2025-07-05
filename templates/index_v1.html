@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Object Detection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3a86ff;
+            --primary-dark: #2667cc;
+            --secondary: #ff006e;
+            --secondary-dark: #d30059;
+            --success: #38b000;
+            --danger: #ff3a5e;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            overflow: hidden;
+            padding-bottom: 2rem;
+        }
+        
+        header {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .subtitle {
+            margin-top: 0.5rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            padding: 0 1.5rem;
+        }
+        
+        button {
+            padding: 0.85rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        button i {
+            font-size: 1.1rem;
+        }
+        
+        #openWebcam {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        #openWebcam:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        #uploadVideo {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        #uploadVideo:hover {
+            background-color: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+        
+        #addPerson {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        #addPerson:hover {
+            background-color: #2a9000;
+            transform: translateY(-2px);
+        }
+        
+        #stopStream {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        #stopStream:hover {
+            background-color: #e1001f;
+            transform: translateY(-2px);
+        }
+        
+        .video-container {
+            width: 90%;
+            height: 450px;
+            margin: 0 auto 2rem;
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .video-placeholder {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .video-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .video-placeholder p {
+            font-size: 1.2rem;
+        }
+        
+        #videoFeed {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .status {
+            padding: 12px 20px;
+            margin: 0 auto 2rem;
+            border-radius: 50px;
+            text-align: center;
+            max-width: 80%;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .success {
+            background-color: rgba(56, 176, 0, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+        
+        .error {
+            background-color: rgba(255, 58, 94, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+            font-size: 1.5rem;
+        }
+        
+        .modal-content label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+        
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border: 2px solid #eaeaea;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .modal-content button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(58, 134, 255, 0.3);
+            justify-content: center;
+        }
+        
+        .modal-content button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(58, 134, 255, 0.4);
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            color: var(--gray);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .close:hover {
+            color: var(--danger);
+        }
+        
+        /* Loading indicator for video processing */
+        .loading-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .loading-spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Status badges for detection */
+        .detection-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(58, 134, 255, 0.9);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            header {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .video-container {
+                height: 350px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Smart Object Detection</h1>
+            <p class="subtitle">Real-time detection with advanced AI technology</p>
+        </header>
+        
+        <div class="controls">
+            <button id="openWebcam"><i class="fas fa-video"></i> Start Webcam</button>
+            <button id="uploadVideo"><i class="fas fa-upload"></i> Upload Video</button>
+            <button id="addPerson"><i class="fas fa-user-plus"></i> Add Person</button>
+            <button id="stopStream" class="hidden"><i class="fas fa-stop-circle"></i> Stop Stream</button>
+        </div>
+        
+        <div id="statusMessage" class="status"></div>
+        
+        <div class="video-container">
+            <div class="video-placeholder" id="placeholder">
+                <i class="fas fa-camera"></i>
+                <p>Start webcam or upload a video to begin detection</p>
+            </div>
+            <img id="videoFeed" src="" alt="Video feed" class="hidden">
+        </div>
+        
+        <div id="addPersonForm" class="modal hidden">
+            <div class="modal-content">
+                <span class="close"><i class="fas fa-times"></i></span>
+                <h2><i class="fas fa-user-plus"></i> Add New Person</h2>
+                <form id="personForm">
+                    <label for="personName">Person's Name:</label>
+                    <input type="text" id="personName" name="personName" placeholder="Enter name" required>
+                    <button type="submit"><i class="fas fa-save"></i> Capture & Save</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="uploadForm" class="modal hidden">
+            <div class="modal-content">
+                <span class="close"><i class="fas fa-times"></i></span>
+                <h2><i class="fas fa-film"></i> Upload Video</h2>
+                <form id="videoForm">
+                    <label for="videoFile">Select Video File:</label>
+                    <input type="file" id="videoFile" name="video" accept="video/*" required>
+                    <button type="submit"><i class="fas fa-upload"></i> Upload & Process</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const videoFeed = document.getElementById('videoFeed');
+            const placeholder = document.getElementById('placeholder');
+            const openWebcamBtn = document.getElementById('openWebcam');
+            const uploadVideoBtn = document.getElementById('uploadVideo');
+            const addPersonBtn = document.getElementById('addPerson');
+            const stopStreamBtn = document.getElementById('stopStream');
+            const statusMessage = document.getElementById('statusMessage');
+            const addPersonForm = document.getElementById('addPersonForm');
+            const uploadForm = document.getElementById('uploadForm');
+            const personForm = document.getElementById('personForm');
+            const videoForm = document.getElementById('videoForm');
+            
+            // Close buttons
+            const closeButtons = document.querySelectorAll('.close');
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    addPersonForm.classList.add('hidden');
+                    uploadForm.classList.add('hidden');
+                });
+            });
+            
+            // State
+            let streamActive = false;
+            
+            // Show status message
+            function showStatus(message, isError = false) {
+                statusMessage.textContent = message;
+                statusMessage.className = isError ? 'status error' : 'status success';
+                statusMessage.style.display = 'block';
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+            
+            // Create loading indicator
+            function showLoading(container, message = 'Processing...') {
+                const loadingEl = document.createElement('div');
+                loadingEl.className = 'loading-indicator';
+                loadingEl.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <p>${message}</p>
+                `;
+                container.appendChild(loadingEl);
+                return loadingEl;
+            }
+            
+            function removeLoading(loadingEl) {
+                if (loadingEl && loadingEl.parentNode) {
+                    loadingEl.parentNode.removeChild(loadingEl);
+                }
+            }
+            
+            // Open webcam
+            openWebcamBtn.addEventListener('click', function() {
+                if (streamActive) {
+                    showStatus('Please stop the current stream first', true);
+                    return;
+                }
+                
+                const videoContainer = document.querySelector('.video-container');
+                const loadingIndicator = showLoading(videoContainer, 'Activating webcam...');
+                
+                fetch('/start_webcam', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    removeLoading(loadingIndicator);
+                    if (data.status === 'success') {
+                        videoFeed.src = '/video_feed?' + new Date().getTime(); // Prevent caching
+                        videoFeed.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                        stopStreamBtn.classList.remove('hidden');
+                        streamActive = true;
+                        
+                        // Add detection badge
+                        const badge = document.createElement('div');
+                        badge.className = 'detection-badge';
+                        badge.innerHTML = '<i class="fas fa-eye"></i> Live Detection';
+                        videoContainer.appendChild(badge);
+                        
+                        showStatus('Webcam activated successfully');
+                    } else {
+                        showStatus(data.message || 'Failed to start webcam', true);
+                    }
+                })
+                .catch(error => {
+                    removeLoading(loadingIndicator);
+                    showStatus('Error: ' + error, true);
+                });
+            });
+            
+            // Upload video button
+            uploadVideoBtn.addEventListener('click', function() {
+                if (streamActive) {
+                    showStatus('Please stop the current stream first', true);
+                    return;
+                }
+                
+                uploadForm.classList.remove('hidden');
+            });
+            
+            // Video form submit
+            videoForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData();
+                const videoFile = document.getElementById('videoFile').files[0];
+                
+                if (!videoFile) {
+                    showStatus('Please select a video file', true);
+                    return;
+                }
+                
+                formData.append('video', videoFile);
+                uploadForm.classList.add('hidden');
+                
+                const videoContainer = document.querySelector('.video-container');
+                const loadingIndicator = showLoading(videoContainer, 'Uploading and processing video...');
+                
+                fetch('/upload_video', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    removeLoading(loadingIndicator);
+                    if (data.status === 'success') {
+                        videoFeed.src = '/video_processing?' + new Date().getTime(); // Prevent caching
+                        videoFeed.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                        stopStreamBtn.classList.remove('hidden');
+                        streamActive = true;
+                        
+                        // Add processing badge
+                        const badge = document.createElement('div');
+                        badge.className = 'detection-badge';
+                        badge.style.background = 'rgba(255, 0, 110, 0.9)';
+                        badge.innerHTML = '<i class="fas fa-cogs"></i> Processing Video';
+                        videoContainer.appendChild(badge);
+                        
+                        showStatus('Video processing started');
+                    } else {
+                        showStatus(data.message || 'Failed to upload video', true);
+                    }
+                })
+                .catch(error => {
+                    removeLoading(loadingIndicator);
+                    showStatus('Error: ' + error, true);
+                });
+            });
+            
+            // Add person button
+            addPersonBtn.addEventListener('click', function() {
+                if (!streamActive) {
+                    showStatus('Please open webcam first', true);
+                    return;
+                }
+                
+                addPersonForm.classList.remove('hidden');
+            });
+            
+            // Person form submit
+            personForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('personName').value;
+                
+                if (!name) {
+                    showStatus('Please enter a name', true);
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('name', name);
+                
+                // Show capturing feedback
+                showStatus('Capturing face data...', false);
+                
+                fetch('/add_person', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        addPersonForm.classList.add('hidden');
+                        document.getElementById('personName').value = '';
+                        showStatus(data.message || 'Person added successfully');
+                    } else {
+                        showStatus(data.message || 'Failed to add person', true);
+                    }
+                })
+                .catch(error => {
+                    showStatus('Error: ' + error, true);
+                });
+            });
+            
+            // Stop stream
+            stopStreamBtn.addEventListener('click', function() {
+                const videoContainer = document.querySelector('.video-container');
+                const badge = videoContainer.querySelector('.detection-badge');
+                if (badge) badge.remove();
+                
+                fetch('/stop_webcam', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    videoFeed.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                    stopStreamBtn.classList.add('hidden');
+                    streamActive = false;
+                    showStatus('Stream stopped successfully');
+                })
+                .catch(error => {
+                    showStatus('Error: ' + error, true);
+                });
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                if (event.target === addPersonForm) {
+                    addPersonForm.classList.add('hidden');
+                }
+                if (event.target === uploadForm) {
+                    uploadForm.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

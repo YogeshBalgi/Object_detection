@@ -1,0 +1,5 @@
+Yogesh,static/known_faces/Yogesh.jpg
+vrunda,static/known_faces/vrunda.jpg
+chaitra,static/known_faces/chaitra.jpg
+Sahil,static/known_faces/Sahil.jpg
+Suyog,static/known_faces/Suyog.jpg
